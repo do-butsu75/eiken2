@@ -228,6 +228,104 @@ function openWordListTab() {
   window.open(url, "_blank");
 }
 
+function openPrintTestTab(settings) {
+  const pool = getFilteredPool(settings);
+  if (pool.length === 0) {
+    alert("条件に一致する単語がありません。");
+    return;
+  }
+  const cards = buildCards(pool, settings);
+  const direction = settings.direction;
+
+  const rangeLabel = settings.rangeSpec && settings.rangeSpec.trim() ? settings.rangeSpec.trim() : "全範囲";
+  const directionLabel = direction === "e2j" ? "単語 → 意味" : "意味 → 単語";
+  const orderLabel = settings.order === "random" ? "ランダム" : "No.順";
+
+  const qRows = cards
+    .map((w, i) => {
+      const front = direction === "e2j" ? w[1] : w[2];
+      return (
+        '<div class="q-item"><span class="q-no">' +
+        (i + 1) +
+        "</span><span class=\"q-front\">" +
+        escapeHtml(front) +
+        '</span><span class="q-blank"></span></div>'
+      );
+    })
+    .join("");
+
+  const aRows = cards
+    .map((w, i) => {
+      const front = direction === "e2j" ? w[1] : w[2];
+      const back = direction === "e2j" ? w[2] : w[1];
+      return (
+        "<tr><td>" +
+        (i + 1) +
+        "</td><td>" +
+        escapeHtml(front) +
+        "</td><td>" +
+        escapeHtml(back) +
+        "</td></tr>"
+      );
+    })
+    .join("");
+
+  const html =
+    '<!doctype html><html lang="ja"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    "<title>英検2級 単語テスト（印刷用）</title>" +
+    "<style>" +
+    "* { box-sizing: border-box; }" +
+    "body{font-family:system-ui,'Hiragino Kaku Gothic ProN',Meiryo,sans-serif;margin:24px;color:#222;}" +
+    ".no-print{margin-bottom:16px;}" +
+    ".no-print button{font-size:14px;padding:8px 18px;border:1px solid #333;background:#333;color:#fff;cursor:pointer;margin-right:8px;}" +
+    ".no-print button.secondary{background:#fff;color:#333;}" +
+    "h1{font-size:18px;margin:0 0 4px;}" +
+    ".meta{font-size:13px;color:#555;margin-bottom:6px;}" +
+    ".info-line{display:flex;gap:24px;font-size:14px;margin:14px 0 18px;border-top:1px solid #999;border-bottom:1px solid #999;padding:8px 0;}" +
+    ".info-line span{white-space:nowrap;}" +
+    ".fill-line{display:inline-block;border-bottom:1px solid #333;min-width:110px;}" +
+    ".q-list{column-count:2;column-gap:28px;}" +
+    ".q-item{display:flex;align-items:baseline;break-inside:avoid;padding:6px 0;border-bottom:1px dotted #ccc;}" +
+    ".q-no{width:26px;flex:none;color:#666;font-size:13px;}" +
+    ".q-front{flex:none;font-size:14px;min-width:120px;padding-right:8px;}" +
+    ".q-blank{flex:1;border-bottom:1px solid #333;min-height:1.1em;}" +
+    ".answer-page{page-break-before:always;margin-top:8px;}" +
+    ".answer-page h2{font-size:15px;margin:0 0 10px;}" +
+    "table{border-collapse:collapse;width:100%;font-size:13px;}" +
+    "table.ans-table{column-count:2;column-gap:28px;}" +
+    "th,td{border-bottom:1px solid #ddd;padding:4px 6px;text-align:left;}" +
+    "th{color:#666;font-weight:normal;}" +
+    "td:first-child,th:first-child{color:#888;width:34px;}" +
+    "@media print{ .no-print{display:none;} body{margin:12mm;} }" +
+    "</style></head><body>" +
+    '<div class="no-print"><button onclick="window.print()">印刷する</button><button class="secondary" onclick="window.close()">閉じる</button></div>' +
+    "<h1>英検2級 単語テスト</h1>" +
+    '<div class="meta">出題範囲: No. ' +
+    escapeHtml(rangeLabel) +
+    "　/　出題数: " +
+    cards.length +
+    "問　/　順序: " +
+    orderLabel +
+    "　/　出題形式: " +
+    directionLabel +
+    "</div>" +
+    '<div class="info-line"><span>得点：<span class="fill-line">&nbsp;</span>／' +
+    cards.length +
+    "</span></div>" +
+    '<div class="q-list">' +
+    qRows +
+    "</div>" +
+    '<div class="answer-page"><h2>解答</h2><table class="ans-table"><tbody>' +
+    aRows +
+    "</tbody></table></div>" +
+    "</body></html>";
+
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
+
 function App() {
   const [settings, setSettings] = useState(loadSettings);
   const [screen, setScreen] = useState("setup"); // setup | study | done
@@ -368,6 +466,11 @@ function SetupScreen({ settings, setSettings, poolSize, start }) {
     ),
 
     h("button", { className: "main-btn", onClick: start, disabled: poolSize === 0 }, "開始"),
+    h(
+      "button",
+      { className: "text-btn block", onClick: () => openPrintTestTab(settings), disabled: poolSize === 0 },
+      "指定範囲のテストを印刷用に別タブで開く"
+    ),
     h("button", { className: "text-btn block", onClick: openWordListTab }, "単語リストを別タブで表示")
   );
 }
